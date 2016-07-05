@@ -28,7 +28,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,7 +63,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
-    private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private MessageSizeEstimator.Handle estimatorHandle;
 
     /**
@@ -107,26 +105,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
-    }
-
-    private EventExecutor childExecutor(EventExecutorGroup group) {
-        if (group == null) {
-            return null;
-        }
-        Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
-        if (childExecutors == null) {
-            // Use size of 4 as most people only use one extra EventExecutor.
-            childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
-        }
-        // Pin one of the child executors once and remember it so that the same child executor
-        // is used to fire events for the same channel.
-        EventExecutor childExecutor = childExecutors.get(group);
-        if (childExecutor == null) {
-            childExecutor = group.next();
-            childExecutors.put(group, childExecutor);
-        }
-        return childExecutor;
+        return new DefaultChannelHandlerContext(this, group == null ? null : group.next(), name, handler);
     }
 
     @Override
